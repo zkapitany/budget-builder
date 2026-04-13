@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:id="mainPane" prefWidth="1400" prefHeight="800"
+    fx:controller="com.budgetbuilder.controller.MainController">
+    
+    <top>
+        <VBox spacing="10" style="-fx-padding: 10; -fx-background-color: #f0f0f0;">
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="Budget Builder - Költségvetés Builder" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button fx:id="settingsBtn" text="⚙️ Beállítások" style="-fx-font-size: 11;"/>
+                <Button fx:id="selectTemplateBtn" text="📁 Template Fájl Kiválasztása" style="-fx-font-size: 11;"/>
+            </HBox>
+            <Label fx:id="templatePathLabel" text="Template fájl nincs kiválasztva" style="-fx-font-size: 10; -fx-text-fill: #666;"/>
+        </VBox>
+    </top>
+
+    <center>
+        <SplitPane dividerPositions="0.5" orientation="VERTICAL">
+            <VBox spacing="10" style="-fx-padding: 10;">
+                <Label text="📋 Anyaglista" style="-fx-font-size: 13; -fx-font-weight: bold;"/>
+                <TableView fx:id="materialTable" VBox.vgrow="ALWAYS">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/></columnResizePolicy>
+                </TableView>
+            </VBox>
+            
+            <VBox spacing="10" style="-fx-padding: 10;">
+                <Label text="🔧 Munkatételek" style="-fx-font-size: 13; -fx-font-weight: bold;"/>
+                <TableView fx:id="workItemTable" VBox.vgrow="ALWAYS">
+                    <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/></columnResizePolicy>
+                </TableView>
+            </VBox>
+        </SplitPane>
+    </center>
+
+    <bottom>
+        <HBox spacing="10" style="-fx-padding: 10; -fx-background-color: #f9f9f9;" alignment="CENTER_LEFT">
+            <Button fx:id="exportBtn" text="💾 Export (Mentés)" style="-fx-padding: 8px 16px;"/>
+            <Button fx:id="consolidateBtn" text="🔄 Rendezés és Összesítés" style="-fx-padding: 8px 16px;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="newItemBtn" text="➕ Új Tétel" style="-fx-font-size: 12; -fx-padding: 8px 16px;"/>
+        </HBox>
+    </bottom>
+</BorderPane>
