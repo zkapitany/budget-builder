@@ -22,7 +22,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 
 public class MainController {
     private static final Logger logger = LoggerFactory.getLogger(MainController.class);
@@ -48,7 +47,7 @@ public class MainController {
         preferencesManager = new PreferencesManager();
         setupTableColumns();
         setupButtons();
-        
+
         // Automatikusan betölt template.xlsx, ha van
         File defaultTemplate = new File("template.xlsx");
         if (defaultTemplate.exists()) {
@@ -60,13 +59,10 @@ public class MainController {
             templatePathLabel.setText("Template fájl nincs kiválasztva");
             logger.warn("Template fájl nem található");
         }
-        
+
         logger.info("MainController inicializálva");
     }
 
-    /**
-     * Táblázat oszlopok beállítása
-     */
     private void setupTableColumns() {
         // ========== ANYAGOK TÁBLÁZAT ==========
         TableColumn<Material, String> matIdCol = new TableColumn<>("Anyag_ID");
@@ -131,9 +127,6 @@ public class MainController {
         workItemTable.getColumns().addAll(workIdCol, workEonCol, bszjCol, elszamolaCol, workMennyCol, workMeCol, workMegjeCol);
     }
 
-    /**
-     * Gombok eseménykezelésének beállítása
-     */
     private void setupButtons() {
         selectTemplateBtn.setOnAction(e -> selectTemplateFile());
         newItemBtn.setOnAction(e -> showNewItemDialog());
@@ -142,16 +135,13 @@ public class MainController {
         settingsBtn.setOnAction(e -> showSettingsDialog());
     }
 
-    /**
-     * Template Excel fájl kiválasztása
-     */
     @FXML
     private void selectTemplateFile() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Template Excel Fájl Kiválasztása");
         fileChooser.getExtensionFilters().addAll(
-            new FileChooser.ExtensionFilter("Excel Fájlok (*.xlsx)", "*.xlsx"),
-            new FileChooser.ExtensionFilter("Összes Fájl (*.*)", "*.*")
+                new FileChooser.ExtensionFilter("Excel Fájlok (*.xlsx)", "*.xlsx"),
+                new FileChooser.ExtensionFilter("Összes Fájl (*.*)", "*.*")
         );
 
         File selectedFile = fileChooser.showOpenDialog(mainPane.getScene().getWindow());
@@ -163,9 +153,6 @@ public class MainController {
         }
     }
 
-    /**
-     * Költségvetés inicializálása
-     */
     private void initializeBudget() {
         try {
             if (templatePath != null && !templatePath.isEmpty()) {
@@ -179,9 +166,6 @@ public class MainController {
         }
     }
 
-    /**
-     * Új tétel hozzáadása dialog megjelenítése
-     */
     private void showNewItemDialog() {
         if (budgetManager == null) {
             showError("Kérlek előbb válassz ki egy template fájlt!");
@@ -190,17 +174,16 @@ public class MainController {
 
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/new-item-dialog.fxml"));
-            
+
             Stage dialogStage = new Stage();
             Scene scene = new Scene(loader.load());
             dialogStage.setTitle("Új Tétel Hozzáadása");
             dialogStage.setScene(scene);
-            
-            // Controller lekérése az FXML-ből
+
             NewItemDialogController controller = loader.getController();
             controller.setBudgetManager(budgetManager);
             controller.setMainController(this);
-            
+
             dialogStage.showAndWait();
             refreshTables();
         } catch (IOException e) {
@@ -209,9 +192,6 @@ public class MainController {
         }
     }
 
-    /**
-     * Költségvetés exportálása (mentése)
-     */
     private void exportBudget() {
         if (budgetManager == null) {
             showError("Nincs költségvetés az exportáláshoz!");
@@ -226,20 +206,26 @@ public class MainController {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Költségvetés Mentése");
         fileChooser.setInitialFileName("költségvetés.xlsx");
-        
-        // Alapértelmezés: User home könyvtár
-        fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
-        
+
+        // Alapértelmezés: PreferencesManager szerinti mappa (properties-ből)
+        File preferredDir = new File(preferencesManager.getDownloadDirectory());
+        if (preferredDir.exists() && preferredDir.isDirectory()) {
+            fileChooser.setInitialDirectory(preferredDir);
+        } else {
+            logger.warn("Beállított download könyvtár nem érvényes: {}", preferredDir.getAbsolutePath());
+            fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+        }
+
         fileChooser.getExtensionFilters().add(
-            new FileChooser.ExtensionFilter("Excel Fájlok (*.xlsx)", "*.xlsx")
+                new FileChooser.ExtensionFilter("Excel Fájlok (*.xlsx)", "*.xlsx")
         );
 
         File file = fileChooser.showSaveDialog(mainPane.getScene().getWindow());
         if (file != null) {
             try {
-                excelService.createBudgetFile(file.getAbsolutePath(), 
-                    budgetManager.getMaterials(), 
-                    budgetManager.getWorkItems());
+                excelService.createBudgetFile(file.getAbsolutePath(),
+                        budgetManager.getMaterials(),
+                        budgetManager.getWorkItems());
                 showNotification("Költségvetés sikeresen mentve:\n" + file.getAbsolutePath());
                 logger.info("Költségvetés mentve: {}", file.getAbsolutePath());
             } catch (IOException e) {
@@ -249,9 +235,6 @@ public class MainController {
         }
     }
 
-    /**
-     * Adatok konszolidálása és rendezése
-     */
     private void consolidateData() {
         if (budgetManager == null) {
             showError("Nincs költségvetés a rendezéshez!");
@@ -274,32 +257,32 @@ public class MainController {
         }
     }
 
-    /**
-     * Beállítások dialógus megjelenítése
-     */
     private void showSettingsDialog() {
         try {
             Stage settingsStage = new Stage();
             settingsStage.setTitle("Beállítások");
-            
+
             VBox content = new VBox(15);
             content.setStyle("-fx-padding: 20;");
-            
-            // ========== Download könyvtár beállítás ==========
+
             HBox downloadDirBox = new HBox(10);
             Label downloadDirLabel = new Label("Download könyvtár:");
             downloadDirLabel.setPrefWidth(150);
-            
+
             TextField downloadDirField = new TextField(preferencesManager.getDownloadDirectory());
             downloadDirField.setEditable(false);
             downloadDirField.setPrefWidth(300);
-            
+
             Button chooseDirBtn = new Button("📁 Könyvtár kiválasztása");
             chooseDirBtn.setOnAction(e -> {
                 DirectoryChooser dirChooser = new DirectoryChooser();
                 dirChooser.setTitle("Download könyvtár kiválasztása");
-                dirChooser.setInitialDirectory(new File(preferencesManager.getDownloadDirectory()));
-                
+
+                File current = new File(preferencesManager.getDownloadDirectory());
+                if (current.exists() && current.isDirectory()) {
+                    dirChooser.setInitialDirectory(current);
+                }
+
                 File selectedDir = dirChooser.showDialog(settingsStage);
                 if (selectedDir != null) {
                     downloadDirField.setText(selectedDir.getAbsolutePath());
@@ -308,38 +291,34 @@ public class MainController {
                     logger.info("Download könyvtár módosítva: {}", selectedDir.getAbsolutePath());
                 }
             });
-            
+
             downloadDirBox.getChildren().addAll(downloadDirLabel, downloadDirField, chooseDirBtn);
-            
-            // ========== Gombsor ==========
+
             HBox buttonBox = new HBox(10);
             buttonBox.setStyle("-fx-alignment: center-right;");
             Button okBtn = new Button("OK");
             okBtn.setPrefWidth(100);
             okBtn.setOnAction(e -> settingsStage.close());
             buttonBox.getChildren().add(okBtn);
-            
+
             content.getChildren().addAll(
-                new Label("Beállítások"),
-                new Separator(),
-                downloadDirBox,
-                new Separator(),
-                buttonBox
+                    new Label("Beállítások"),
+                    new Separator(),
+                    downloadDirBox,
+                    new Separator(),
+                    buttonBox
             );
-            
+
             Scene scene = new Scene(content, 600, 250);
             settingsStage.setScene(scene);
             settingsStage.showAndWait();
-            
+
         } catch (Exception e) {
             logger.error("Hiba a beállítások dialógus megnyitásakor", e);
             showError("Hiba: " + e.getMessage());
         }
     }
 
-    /**
-     * Táblázatok frissítése
-     */
     public void refreshTables() {
         if (budgetManager != null) {
             materialTable.setItems(FXCollections.observableArrayList(budgetManager.getMaterials()));
@@ -347,9 +326,6 @@ public class MainController {
         }
     }
 
-    /**
-     * Hiba üzenet megjelenítése
-     */
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Hiba");
@@ -359,9 +335,6 @@ public class MainController {
         logger.error("Hiba: {}", message);
     }
 
-    /**
-     * Siker/Tájékoztatási üzenet megjelenítése
-     */
     private void showNotification(String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Siker");
