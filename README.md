@@ -74,8 +74,13 @@ default.template.directory=C:/Program Files/BudgetBuilder/template
 Az EXE/app-image elkészítéséhez futtasd az alábbi scriptet PowerShell-ből:
 
 ```powershell
-Set-ExecutionPolicy -Scope Process Bypass
+Remove-Item -Recurse -Force .\target\dist -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force .\target\jpackage-input -ErrorAction SilentlyContinue
 .\build-app-image.ps1
+
+//
+//Set-ExecutionPolicy -Scope Process Bypass
+//.\build-app-image.ps1
 ```
 
 A script:
