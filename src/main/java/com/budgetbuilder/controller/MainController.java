@@ -22,6 +22,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class MainController {
     private static final Logger logger = LoggerFactory.getLogger(MainController.class);
@@ -48,17 +50,7 @@ public class MainController {
         setupTableColumns();
         setupButtons();
 
-        // Automatikusan betölt template.xlsx, ha van
-        File defaultTemplate = new File("template.xlsx");
-        if (defaultTemplate.exists()) {
-            templatePath = defaultTemplate.getAbsolutePath();
-            templatePathLabel.setText("Template: " + defaultTemplate.getName());
-            initializeBudget();
-            logger.info("Template fájl automatikusan betöltve: {}", templatePath);
-        } else {
-            templatePathLabel.setText("Template fájl nincs kiválasztva");
-            logger.warn("Template fájl nem található");
-        }
+        loadTemplateFromPreferences();
 
         logger.info("MainController inicializálva");
     }
@@ -144,10 +136,19 @@ public class MainController {
                 new FileChooser.ExtensionFilter("Összes Fájl (*.*)", "*.*")
         );
 
+        File initialDir = resolveValidDirectory(preferencesManager.getTemplateDirectory(), new File(System.getProperty("user.home")));
+        if (initialDir != null) {
+            fileChooser.setInitialDirectory(initialDir);
+        }
+
         File selectedFile = fileChooser.showOpenDialog(mainPane.getScene().getWindow());
         if (selectedFile != null) {
             templatePath = selectedFile.getAbsolutePath();
             templatePathLabel.setText("Template: " + selectedFile.getName());
+            File parent = selectedFile.getParentFile();
+            if (parent != null) {
+                preferencesManager.setTemplateDirectory(parent.getAbsolutePath());
+            }
             initializeBudget();
             logger.info("Template fájl kiválasztva: {}", templatePath);
         }
@@ -207,13 +208,9 @@ public class MainController {
         fileChooser.setTitle("Költségvetés Mentése");
         fileChooser.setInitialFileName("költségvetés.xlsx");
 
-        // Alapértelmezés: PreferencesManager szerinti mappa (properties-ből)
-        File preferredDir = new File(preferencesManager.getDownloadDirectory());
-        if (preferredDir.exists() && preferredDir.isDirectory()) {
+        File preferredDir = resolveValidDirectory(preferencesManager.getExportDirectory(), new File(System.getProperty("user.home")));
+        if (preferredDir != null) {
             fileChooser.setInitialDirectory(preferredDir);
-        } else {
-            logger.warn("Beállított download könyvtár nem érvényes: {}", preferredDir.getAbsolutePath());
-            fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
         }
 
         fileChooser.getExtensionFilters().add(
@@ -266,50 +263,85 @@ public class MainController {
             content.setStyle("-fx-padding: 20;");
 
             HBox downloadDirBox = new HBox(10);
-            Label downloadDirLabel = new Label("Download könyvtár:");
+            Label downloadDirLabel = new Label("Export/Download könyvtár:");
             downloadDirLabel.setPrefWidth(150);
 
-            TextField downloadDirField = new TextField(preferencesManager.getDownloadDirectory());
+            TextField downloadDirField = new TextField(preferencesManager.getExportDirectory());
             downloadDirField.setEditable(false);
             downloadDirField.setPrefWidth(300);
 
-            Button chooseDirBtn = new Button("📁 Könyvtár kiválasztása");
-            chooseDirBtn.setOnAction(e -> {
+            Button chooseExportDirBtn = new Button("📁 Könyvtár kiválasztása");
+            chooseExportDirBtn.setOnAction(e -> {
                 DirectoryChooser dirChooser = new DirectoryChooser();
-                dirChooser.setTitle("Download könyvtár kiválasztása");
+                dirChooser.setTitle("Export/Download könyvtár kiválasztása");
 
-                File current = new File(preferencesManager.getDownloadDirectory());
-                if (current.exists() && current.isDirectory()) {
+                File current = resolveValidDirectory(downloadDirField.getText(), new File(System.getProperty("user.home")));
+                if (current != null) {
                     dirChooser.setInitialDirectory(current);
                 }
 
                 File selectedDir = dirChooser.showDialog(settingsStage);
                 if (selectedDir != null) {
                     downloadDirField.setText(selectedDir.getAbsolutePath());
-                    preferencesManager.setDownloadDirectory(selectedDir.getAbsolutePath());
-                    showNotification("Download könyvtár beállítva!");
-                    logger.info("Download könyvtár módosítva: {}", selectedDir.getAbsolutePath());
                 }
             });
 
-            downloadDirBox.getChildren().addAll(downloadDirLabel, downloadDirField, chooseDirBtn);
+            downloadDirBox.getChildren().addAll(downloadDirLabel, downloadDirField, chooseExportDirBtn);
+
+            HBox templateDirBox = new HBox(10);
+            Label templateDirLabel = new Label("Template könyvtár:");
+            templateDirLabel.setPrefWidth(150);
+
+            TextField templateDirField = new TextField(preferencesManager.getTemplateDirectory());
+            templateDirField.setEditable(false);
+            templateDirField.setPrefWidth(300);
+
+            Button chooseTemplateDirBtn = new Button("📁 Könyvtár kiválasztása");
+            chooseTemplateDirBtn.setOnAction(e -> {
+                DirectoryChooser dirChooser = new DirectoryChooser();
+                dirChooser.setTitle("Template könyvtár kiválasztása");
+
+                File current = resolveValidDirectory(templateDirField.getText(), new File(System.getProperty("user.home")));
+                if (current != null) {
+                    dirChooser.setInitialDirectory(current);
+                }
+
+                File selectedDir = dirChooser.showDialog(settingsStage);
+                if (selectedDir != null) {
+                    templateDirField.setText(selectedDir.getAbsolutePath());
+                }
+            });
+
+            templateDirBox.getChildren().addAll(templateDirLabel, templateDirField, chooseTemplateDirBtn);
 
             HBox buttonBox = new HBox(10);
             buttonBox.setStyle("-fx-alignment: center-right;");
+            Button saveBtn = new Button("Mentés");
+            saveBtn.setPrefWidth(100);
+            saveBtn.setOnAction(e -> {
+                preferencesManager.setExportDirectory(downloadDirField.getText());
+                preferencesManager.setTemplateDirectory(templateDirField.getText());
+                loadTemplateFromPreferences();
+                showNotification("Beállítások mentve a Preferencies.txt fájlba.");
+                settingsStage.close();
+            });
+
             Button okBtn = new Button("OK");
             okBtn.setPrefWidth(100);
             okBtn.setOnAction(e -> settingsStage.close());
-            buttonBox.getChildren().add(okBtn);
+            buttonBox.getChildren().addAll(saveBtn, okBtn);
 
             content.getChildren().addAll(
                     new Label("Beállítások"),
                     new Separator(),
                     downloadDirBox,
                     new Separator(),
+                    templateDirBox,
+                    new Separator(),
                     buttonBox
             );
 
-            Scene scene = new Scene(content, 600, 250);
+            Scene scene = new Scene(content, 650, 320);
             settingsStage.setScene(scene);
             settingsStage.showAndWait();
 
@@ -342,5 +374,38 @@ public class MainController {
         alert.setContentText(message);
         alert.showAndWait();
         logger.info("Üzenet: {}", message);
+    }
+
+    private void loadTemplateFromPreferences() {
+        Path templateDir = Paths.get(preferencesManager.getTemplateDirectory());
+        Path templateFile = templateDir.resolve("template.xlsx");
+        File defaultTemplate = templateFile.toFile();
+
+        if (defaultTemplate.exists() && defaultTemplate.isFile()) {
+            templatePath = defaultTemplate.getAbsolutePath();
+            templatePathLabel.setText("Template: " + defaultTemplate.getName());
+            initializeBudget();
+            logger.info("Template fájl automatikusan betöltve: {}", templatePath);
+        } else {
+            templatePath = null;
+            templatePathLabel.setText("Template fájl nincs kiválasztva");
+            logger.warn("Template fájl nem található: {}", defaultTemplate.getAbsolutePath());
+        }
+    }
+
+    private File resolveValidDirectory(String path, File fallbackDir) {
+        if (path != null && !path.isBlank()) {
+            File dir = new File(path);
+            if (dir.exists() && dir.isDirectory()) {
+                return dir;
+            }
+            logger.warn("A beállított könyvtár nem létezik: {}. Fallback használva.", path);
+        }
+
+        if (fallbackDir != null && fallbackDir.exists() && fallbackDir.isDirectory()) {
+            return fallbackDir;
+        }
+
+        return null;
     }
 }

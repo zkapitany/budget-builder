@@ -22,5 +22,5 @@ dependency-reduced-pom.xml
 # Runtime
 *.log
 *.xlsx
-!template.xlsx
+!template/template.xlsx
 költségvetés.xlsx
