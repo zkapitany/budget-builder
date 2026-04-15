@@ -85,6 +85,7 @@ jpackage ^
   --vendor "zkapitany" ^
   --dest target\dist ^
   --input target ^
+  --app-content template ^
   --main-jar budget-builder-1.0.0-jar-with-dependencies.jar ^
   --main-class com.budgetbuilder.BudgetBuilderApp ^
   --runtime-image target\runtime ^
