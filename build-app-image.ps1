@@ -37,19 +37,40 @@ jlink `
   --no-header-files `
   --no-man-pages
 
+# --- FIX: dedikált jpackage input staging dir + jar automatikus keresése ---
+$TargetDir = Join-Path $PSScriptRoot "target"
+
+$Jar = Get-ChildItem -Path $TargetDir -Filter "*-jar-with-dependencies.jar" -File |
+  Sort-Object LastWriteTime -Descending |
+  Select-Object -First 1
+
+if (-not $Jar) {
+  throw "Nem találok '*-jar-with-dependencies.jar' fájlt a target mappában: $TargetDir"
+}
+
+$JarName = $Jar.Name
+$JarPath = $Jar.FullName
+Write-Host "Using fat-jar: $JarPath"
+
+$JpkgInputDir = Join-Path $TargetDir "jpackage-input"
+Remove-Item -Recurse -Force $JpkgInputDir -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Path $JpkgInputDir | Out-Null
+
+Copy-Item -Force $JarPath (Join-Path $JpkgInputDir $JarName)
+
 Write-Host "`n== jpackage app-image (WiX nélkül) =="
-Remove-Item -Recurse -Force "target\dist" -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force (Join-Path $TargetDir "dist") -ErrorAction SilentlyContinue
 jpackage `
   --type app-image `
   --name BudgetBuilder `
   --app-version 1.0.0 `
   --vendor "zkapitany" `
-  --dest "target\dist" `
-  --input "target" `
+  --dest (Join-Path $TargetDir "dist") `
+  --input $JpkgInputDir `
   --app-content "template" `
-  --main-jar "budget-builder-1.0.0-jar-with-dependencies.jar" `
+  --main-jar $JarName `
   --main-class "com.budgetbuilder.BudgetBuilderApp" `
-  --runtime-image "target\runtime"
+  --runtime-image (Join-Path $TargetDir "runtime")
 
 Write-Host "`nDONE!"
 Write-Host "App image folder: target\dist\BudgetBuilder"
